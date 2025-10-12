@@ -2,7 +2,7 @@ algorithm: astar
 
 # --- data ---
 num_samples:
-  train: 3
+  train: 5
   val: 1
   test: 1
 

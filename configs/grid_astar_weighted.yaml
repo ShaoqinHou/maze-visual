@@ -2,9 +2,9 @@ algorithm: astar
 
 # --- data ---
 num_samples:
-  train: 2000
-  val: 200
-  test: 200
+  train: 5
+  val: 1
+  test: 1
 
 # --- grid generation ---
 width: 16

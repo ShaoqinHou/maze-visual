@@ -60,15 +60,14 @@ def astar(sample: GraphSample):
     ei = np.stack(np.nonzero(adj + np.eye(n, dtype=adj.dtype)))
 
     def compute_current_scalars(g_scores):
-        # Per-edge scalars: edge weights; self-loops carry f-scores (g + h)
+        # Per-edge scalars: edge weights; self-loops carry g-scores (not f)
         s = adj[ei[0], ei[1]].copy()
-        f_scores = g_scores + h
         # avoid inf in supervision by using a large finite sentinel for undiscovered nodes
         mask = ~np.isfinite(g_scores)
+        g_safe = g_scores.copy()
         if mask.any():
-            f_scores = f_scores.copy()
-            f_scores[mask] = h[mask] + 1e6
-        s[ei[0] == ei[1]] = f_scores
+            g_safe[mask] = 1e6
+        s[ei[0] == ei[1]] = g_safe
         return s
 
     in_queue[start] = 1
