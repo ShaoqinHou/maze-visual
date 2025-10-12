@@ -1,3 +1,4 @@
+python train.py --config_path configs/bfs.yaml --num_seeds 1
 # Discrete Neural Algorithmic Reasoning
 This repository contains the official implementation of the experiments from the paper
 "Discrete Neural Algorithmic Reasoning".

@@ -2,9 +2,9 @@ algorithm: bfs
 
 # --- data ---
 num_samples:
-  train: 10000
-  val: 320
-  test: 320
+  train: 5
+  val: 1
+  test: 1
 
 problem_size:
   train: 16
