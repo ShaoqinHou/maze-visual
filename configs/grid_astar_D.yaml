@@ -9,7 +9,7 @@ num_samples:
 # --- grid generation (0% walls) ---
 width: 4
 height: 4
-wall_pct: 0.30
+wall_pct: 0.00
 connectivity: 4
 ensure_connected: true
 grid_weighted: false
@@ -17,20 +17,20 @@ grid_weighted: false
 # --- model ---
 num_node_states: 2
 num_edge_states: 2
-h: 384
+h: 256
 output_type: pointer
 output_idx: 0
 
 # --- training ---
 batch_size: 128
-learning_rate: 0.00025
+learning_rate: 0.0002
 weight_decay: 0.0
 num_iterations: 1500
 eval_each: 25
 stepwise_training: true
 processor_upper_t: 0.08
 processor_lower_t: 0.08
-use_noise: true
+use_noise: false
 
 # --- io ---
 models_directory: models
