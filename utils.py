@@ -75,8 +75,11 @@ def pointer_accuracy_tree_masked(graph, prediction):
     in_tree = graph.node_fts[:, -1, 1] > 0.5
     # Correct per edge, then aggregate per receiver node
     correct_edge = (graph.y * is_predicted_pointer).float()
-    correct_per_node = scatter(correct_edge, edge_index[1], reduce="sum")
-    total = in_tree.sum().clamp(min=1)
+    # Aggregate correctness per sender node (one predicted edge per sender)
+    correct_per_node = scatter(correct_edge, edge_index[0], reduce="sum")
+    total = int(in_tree.sum().item()) if hasattr(in_tree, 'sum') else int(in_tree.sum())
+    if total == 0:
+        return 1.0
     return (correct_per_node[in_tree].sum() / total).item()
 
 
@@ -87,11 +90,12 @@ def pointer_accuracy_graph_level_tree_masked(graph, prediction):
     )
     in_tree = graph.node_fts[:, -1, 1] > 0.5
     correct_edge = (graph.y * is_predicted_pointer).float()
-    correct_per_node = scatter(correct_edge, edge_index[1], reduce="sum")
+    correct_per_node = scatter(correct_edge, edge_index[0], reduce="sum")
     # Graph counts as correct if all in-tree nodes are correct
-    if in_tree.sum() == 0:
+    total = int(in_tree.sum().item()) if hasattr(in_tree, 'sum') else int(in_tree.sum())
+    if total == 0:
         return 1.0
-    return 1.0 * (correct_per_node[in_tree].sum() == in_tree.sum())
+    return 1.0 * (correct_per_node[in_tree].sum().item() == total)
 
 
 def node_mask_accuracy(graph, prediction):

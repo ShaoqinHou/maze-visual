@@ -24,7 +24,7 @@ def to_bool(x: Optional[str | int | bool], default: bool) -> bool:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str, required=True,
-                        help="Path to grid_* YAML config used for training (for model hyperparams & algo)")
+                        help="Path to grid_* YAML config used for training (for model hyperparams and algorithm)")
     parser.add_argument("--checkpoint_path", type=str, required=True,
                         help="Path to model checkpoint (torch.save state_dict)")
 
@@ -37,6 +37,15 @@ def main():
     parser.add_argument("--ensure_connected", default=None, help="1/0 to resample until (s,t) reachable")
     parser.add_argument("--grid_weighted", default=None, help="1/0 to use weighted edges (Dijkstra/A*)")
     parser.add_argument("--seed", type=int, default=1234, help="Eval data seed base")
+
+    # Optional model/eval overrides (use with caution; should match training)
+    parser.add_argument("--algo", type=str, default=None, help="Override algorithm (e.g., astar)")
+    parser.add_argument("--h", type=int, default=None, help="Override model hidden size")
+    parser.add_argument("--num_node_states", type=int, default=None, help="Override num_node_states")
+    parser.add_argument("--num_edge_states", type=int, default=None, help="Override num_edge_states")
+    parser.add_argument("--output_type", type=str, default=None, help="Override output_type (pointer|node_mask)")
+    parser.add_argument("--output_idx", type=int, default=None, help="Override output_idx (channel index)")
+    parser.add_argument("--batch_size", type=int, default=None, help="Override eval batch size")
 
     args = parser.parse_args()
 
@@ -62,6 +71,24 @@ def main():
     # Align SPEC for A*
     if cfg.algorithm == "astar" and "astar" not in gd.SPEC:
         gd.SPEC["astar"] = gd.SPEC["dijkstra"]
+
+    # Optional model overrides
+    if args.algo is not None:
+        cfg.algorithm = str(args.algo)
+        if cfg.algorithm == "astar" and "astar" not in gd.SPEC:
+            gd.SPEC["astar"] = gd.SPEC["dijkstra"]
+    if args.h is not None:
+        cfg.h = int(args.h)
+    if args.num_node_states is not None:
+        cfg.num_node_states = int(args.num_node_states)
+    if args.num_edge_states is not None:
+        cfg.num_edge_states = int(args.num_edge_states)
+    if args.output_type is not None:
+        cfg.output_type = str(args.output_type)
+    if args.output_idx is not None:
+        cfg.output_idx = int(args.output_idx)
+    if args.batch_size is not None:
+        cfg.batch_size = int(args.batch_size)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = models.Dnar(cfg).to(device)
@@ -91,4 +118,3 @@ if __name__ == "__main__":
     torch.set_num_threads(5)
     torch.set_default_tensor_type(torch.DoubleTensor)
     main()
-

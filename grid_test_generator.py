@@ -3,7 +3,7 @@
 Determinism, optimality, and trace tester for grid generators.
 
 Notes for A* alignment (current design):
-- Self-loop scalars carry g-scores (not f), undiscovered uses ~1e6 sentinel.
+- Self-loop scalars carry f-scores (g + h), with a tiny tie-break by node id, and undiscovered uses ~1e6 + h sentinel.
 - Edge scalars carry edge weights (constant across steps).
 - Final pointer matrix represents a shortest-path tree (admissible/consistent h, non-negative weights, no early-exit).
 """
@@ -280,7 +280,7 @@ def run_suite(runs: int, width: int, height: int, wall_pct: float, seed_base: in
             for (u, v) in s1.edges:
                 expected = 1.0 if s1.weights is None else float(s1.weights.get((u, v), 1.0))
                 assert abs(M[u, v] - expected) < 1e-9, f"{label}: edge scalar mismatch at ({u},{v}) seed {seed}: {M[u,v]} vs {expected}"
-            # 2) Self-loop scalars equal g with sentinel for inf
+            # 2) Self-loop scalars equal f=g+h (+ tiny tie-break) with sentinel for inf
             T = n1_nodes.shape[0]
             for t in range(T):
                 S_flat = s1_scal[t, :, 0]
@@ -288,8 +288,18 @@ def run_suite(runs: int, width: int, height: int, wall_pct: float, seed_base: in
                 Mt[ei[0], ei[1]] = S_flat
                 diag = np.diag(Mt)
                 g = g_traj[t].copy()
-                g[~np.isfinite(g)] = 1e6
-                assert np.allclose(diag, g, atol=1e-9), f"{label}: g-scalar mismatch at step {t} seed {seed}"
+                h = heuristic(s1)
+                f = g + h
+                mask = ~np.isfinite(g)
+                if mask.any():
+                    f[mask] = h[mask] + 1e6
+                # incorporate tiny deterministic tie-break used in generator
+                n = s1.n
+                if n > 1:
+                    eps = 1e-6
+                    tie = (np.arange(n, dtype=float) / (n - 1)) * eps
+                    f = f + tie
+                assert np.allclose(diag, f, atol=1e-9), f"{label}: f-scalar (with tie-break) mismatch at step {t} seed {seed}"
 
     print(f"Config: runs={runs}, grid={width}x{height}, wall_pct={wall_pct}, seed_base={seed_base}, ensure_connected={int(ensure_connected)}")
 

@@ -1,0 +1,37 @@
+algorithm: astar
+
+# --- data ---
+num_samples:
+  train: 10000
+  val: 1000
+  test: 1000
+
+# --- grid generation (harder) ---
+width: 4
+height: 4
+wall_pct: 0.40
+connectivity: 4
+ensure_connected: true
+grid_weighted: false
+
+# --- model ---
+num_node_states: 2
+num_edge_states: 2
+h: 256
+output_type: pointer
+output_idx: 0
+
+# --- training ---
+batch_size: 128
+learning_rate: 0.0002
+weight_decay: 0.0
+num_iterations: 1500
+eval_each: 50
+stepwise_training: true
+processor_upper_t: 1.5
+processor_lower_t: 0.10
+use_noise: true
+
+# --- io ---
+models_directory: models
+tensorboard_logs: true

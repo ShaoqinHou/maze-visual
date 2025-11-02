@@ -1,4 +1,5 @@
 import argparse
+import os
 
 import numpy as np
 import torch
@@ -27,7 +28,7 @@ def evaluate(model, val_data, test_data, metrics_list, model_saver, writer, step
     model_saver.visit(model, val_scores)
 
 
-def train(config: GridConfig, seed):
+def train(config: GridConfig, seed, resume_path: str | None = None, resume_last: bool = False):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Provide SPEC entry for A* compatible with dijkstra states layout
@@ -36,11 +37,26 @@ def train(config: GridConfig, seed):
 
     model = models.Dnar(config).to(device)
 
+    # Build model name and optionally resume weights
+    model_name = f"grid_{config.algorithm}_{'w' if config.grid_weighted else 'uw'}_{seed}"
+    if resume_path:
+        if not os.path.exists(resume_path):
+            raise FileNotFoundError(f"Resume path does not exist: {resume_path}")
+        state = torch.load(resume_path, map_location="cpu")
+        model.load_state_dict(state)
+        print(f"Resumed model weights from: {resume_path}")
+    elif resume_last:
+        auto_path = os.path.join(config.models_directory, f"{model_name}_last")
+        if os.path.exists(auto_path):
+            state = torch.load(auto_path, map_location="cpu")
+            model.load_state_dict(state)
+            print(f"Resumed model weights from: {auto_path}")
+
     opt = torch.optim.AdamW(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
     )
 
-    model_name = f"grid_{config.algorithm}_{'w' if config.grid_weighted else 'uw'}_{seed}"
+    # model_name already defined above
     model_saver = utils.ModelSaver(config.models_directory, model_name)
 
     train_data = create_grid_dataloader(config, "train", seed=seed, device=device)
@@ -89,6 +105,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str, default="./configs/grid_bfs.yaml")
     parser.add_argument("--num_seeds", type=int, default=1)
+    parser.add_argument("--resume_path", type=str, default=None, help="Path to checkpoint to resume from")
+    parser.add_argument("--resume_last", action="store_true", help="Resume from models/<auto_name>_last if present")
 
     options = parser.parse_args()
 
@@ -99,4 +117,6 @@ if __name__ == "__main__":
         torch.manual_seed(seed)
 
         config = read_config(options.config_path)
-        model = train(config, seed)
+        model = train(config, seed, resume_path=options.resume_path, resume_last=options.resume_last)
+
+

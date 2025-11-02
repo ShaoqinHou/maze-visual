@@ -60,14 +60,23 @@ def astar(sample: GraphSample):
     ei = np.stack(np.nonzero(adj + np.eye(n, dtype=adj.dtype)))
 
     def compute_current_scalars(g_scores):
-        # Per-edge scalars: edge weights; self-loops carry g-scores (not f)
+        # Per-edge scalars: edge weights; self-loops carry f-scores (g + h)
+        # with a tiny deterministic tie-break by node id to stabilize argmin.
         s = adj[ei[0], ei[1]].copy()
+        f_scores = g_scores + h
         # avoid inf in supervision by using a large finite sentinel for undiscovered nodes
         mask = ~np.isfinite(g_scores)
-        g_safe = g_scores.copy()
         if mask.any():
-            g_safe[mask] = 1e6
-        s[ei[0] == ei[1]] = g_safe
+            f_scores = f_scores.copy()
+            f_scores[mask] = h[mask] + 1e6
+        # add tiny tie-break proportional to node id (stable, does not change optimality)
+        # tie-break is per node (match diagonal/self-loops), not per edge
+        n_nodes = int(g_scores.shape[0])
+        if n_nodes > 1:
+            eps = 1e-4
+            tie = (np.arange(n_nodes, dtype=float) / (n_nodes - 1)) * eps
+            f_scores = f_scores + tie
+        s[ei[0] == ei[1]] = f_scores
         return s
 
     in_queue[start] = 1
@@ -97,7 +106,12 @@ def astar(sample: GraphSample):
             )
             continue
 
+        # selection by f with the same tiny deterministic tie-break by node id
         f = g + h + (1.0 - mask) * 1e9
+        if n > 1:
+            eps = 1e-4
+            tie = (np.arange(n, dtype=float) / (n - 1)) * eps
+            f = f + tie
         node = int(np.argmin(f))
 
         # settle node
